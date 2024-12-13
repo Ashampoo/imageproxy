@@ -1,0 +1,1 @@
+# Ashampoo Image Proxy Service
