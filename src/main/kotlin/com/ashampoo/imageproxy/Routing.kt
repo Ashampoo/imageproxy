@@ -15,6 +15,10 @@
  */
 package com.ashampoo.imageproxy
 
+import app.photofox.vipsffm.VImage
+import app.photofox.vipsffm.Vips
+import app.photofox.vipsffm.VipsError
+import app.photofox.vipsffm.VipsOption
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -23,8 +27,12 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.skia.Image
-import org.slf4j.LoggerFactory
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import kotlin.math.max
+import kotlin.math.round
 
 private const val SERVER_BANNER = "Ashampoo Image Proxy Service"
 private const val AUTHORIZATION_HEADER = "Authorization"
@@ -34,7 +42,12 @@ private val validQualityRange = 10..100
 private const val DEFAULT_LONG_SIDE_PX = 480
 private const val DEFAULT_QUALITY = 90
 
+private const val DEFAULT_TARGET_FORMAT = ".jpg"
+
 private val httpClient = HttpClient()
+
+private val noRotate = VipsOption.Enum("no_rotate", 1)
+private val stripMetadata = VipsOption.Enum("strip", 1)
 
 private val usageString = buildString {
 
@@ -104,17 +117,77 @@ fun Application.configureRouting() {
 
             val remoteBytes = response.bodyAsBytes()
 
-            val image = Image.makeFromEncoded(remoteBytes)
+            try {
 
-            val thumbnail = image.scale(longSidePx)
+                val thumbnailBytes = createThumbnailBytes(
+                    originalBytes = remoteBytes,
+                    longSidePx = longSidePx,
+                    quality = quality
+                )
 
-            val thumbnailBytes = thumbnail.encodeToJpg(quality)
+                call.respondBytes(
+                    bytes = thumbnailBytes,
+                    contentType = ContentType.Image.JPEG,
+                    status = HttpStatusCode.OK
+                )
 
-            call.respondBytes(
-                bytes = thumbnailBytes,
-                contentType = ContentType.Image.JPEG,
-                status = HttpStatusCode.OK
-            )
+            } catch (ex: VipsError) {
+
+                log.error("Error in image processing.", ex)
+
+                call.respond(HttpStatusCode.InternalServerError, ex.message ?: "Error")
+
+                return@get
+            }
         }
     }
+}
+
+private suspend fun createThumbnailBytes(
+    originalBytes: ByteArray,
+    longSidePx: Int,
+    quality: Int
+): ByteArray {
+
+    val deferred = CompletableDeferred<ByteArray>()
+
+    withContext(Dispatchers.IO) {
+
+        try {
+
+            Vips.run { arena ->
+
+                val sourceImage = VImage.newFromBytes(arena, originalBytes)
+
+                val resizeFactor: Double =
+                    longSidePx / max(sourceImage.width.toDouble(), sourceImage.height.toDouble())
+
+                @Suppress("MagicNumber")
+                val thumbnailWidth = max(1, round(resizeFactor * sourceImage.width + 0.3).toInt())
+
+                val thumbnail = sourceImage.thumbnailImage(
+                    thumbnailWidth,
+                    noRotate
+                )
+
+                val outputStream = ByteArrayOutputStream()
+
+                thumbnail.writeToStream(
+                    outputStream,
+                    DEFAULT_TARGET_FORMAT,
+                    stripMetadata,
+                    VipsOption.Enum("Q", quality)
+                )
+
+                val thumbnailBytes = outputStream.toByteArray()
+
+                deferred.complete(thumbnailBytes)
+            }
+
+        } catch (ex: Exception) {
+            deferred.completeExceptionally(ex)
+        }
+    }
+
+    return deferred.await()
 }

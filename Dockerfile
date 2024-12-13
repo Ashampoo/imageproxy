@@ -7,6 +7,7 @@ COPY src src
 RUN ./gradlew --no-daemon --info buildFatJar
 
 FROM amazoncorretto:22-alpine
+RUN apk add --no-cache vips-dev
 RUN mkdir /app
 COPY --from=BUILD_STAGE /tmp/build/libs/*-all.jar /app/ktor-server.jar
 EXPOSE 8080:8080

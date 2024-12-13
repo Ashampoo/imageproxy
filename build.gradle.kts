@@ -1,7 +1,6 @@
 val kotlin_version: String by project
 val logback_version: String by project
 val vips_ffm_version: String by project
-val skiko_version: String by project
 
 plugins {
     kotlin("jvm") version "2.1.0"
@@ -44,28 +43,4 @@ dependencies {
     implementation("app.photofox.vips-ffm:vips-ffm-core:$vips_ffm_version")
 
     implementation("ch.qos.logback:logback-classic:$logback_version")
-
-    /*
-     * SKIKO
-     */
-
-    val osName = System.getProperty("os.name")
-    val targetOs = when {
-        osName == "Mac OS X" -> "macos"
-        osName.startsWith("Win") -> "windows"
-        osName.startsWith("Linux") -> "linux"
-        else -> error("Unsupported OS: $osName")
-    }
-
-    val osArch = System.getProperty("os.arch")
-    val targetArch = when (osArch) {
-        "x86_64", "amd64" -> "x64"
-        "aarch64" -> "arm64"
-        else -> error("Unsupported arch: $osArch")
-    }
-
-    val target = "${targetOs}-${targetArch}"
-    dependencies {
-        implementation("org.jetbrains.skiko:skiko-awt-runtime-$target:$skiko_version")
-    }
 }
