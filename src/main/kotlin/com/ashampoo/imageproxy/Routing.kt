@@ -49,16 +49,6 @@ private val httpClient = HttpClient()
 private val noRotate = VipsOption.Enum("no_rotate", 1)
 private val stripMetadata = VipsOption.Enum("strip", 1)
 
-private val usageString = buildString {
-
-    appendLine(SERVER_BANNER)
-    appendLine()
-    appendLine(
-        "Usage: Send HTTP GET request with headers " +
-            "'RemoteUrl' (mandatory), 'LongSidePx' (optional) & 'Quality' (optional) set."
-    )
-}
-
 fun Application.configureRouting() {
     routing {
 
@@ -67,7 +57,7 @@ fun Application.configureRouting() {
             val remoteUrl = call.request.header("RemoteUrl")
 
             if (remoteUrl == null) {
-                call.respondText(usageString)
+                call.respondText(SERVER_BANNER)
                 return@get
             }
 
