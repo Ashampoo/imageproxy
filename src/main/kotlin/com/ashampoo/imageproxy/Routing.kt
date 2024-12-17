@@ -31,6 +31,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.net.ConnectException
 import kotlin.math.max
 import kotlin.math.round
 
@@ -84,11 +85,18 @@ fun Application.configureRouting() {
                 return@get
             }
 
-            val response = httpClient.get(remoteUrl) {
+            val response = try {
 
-                /* If set, pass the auth token on to the remote service */
-                if (authToken != null)
-                    header(AUTHORIZATION_HEADER, authToken)
+                httpClient.get(remoteUrl) {
+
+                    /* If set, pass the auth token on to the remote service */
+                    if (authToken != null)
+                        header(AUTHORIZATION_HEADER, authToken)
+                }
+
+            } catch (ex: ConnectException) {
+                call.respond(HttpStatusCode.InternalServerError, "Failed to connect to $remoteUrl")
+                return@get
             }
 
             /* If the remote URL requires authorization we forward it as is. */
