@@ -29,3 +29,14 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/ashampoo/imageproxy:latest
+
+      - name: Save Docker image as a tar archive
+        run: |
+          docker pull ghcr.io/ashampoo/imageproxy:latest
+          docker save -o imageproxy-latest.tar ghcr.io/ashampoo/imageproxy:latest
+
+      - name: Upload Docker image as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image-tar
+          path: imageproxy-latest.tar
