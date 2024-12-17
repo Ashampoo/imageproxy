@@ -38,5 +38,5 @@ jobs:
       - name: Upload Docker image as an artifact
         uses: actions/upload-artifact@v3
         with:
-          name: docker-image-tar
+          name: imageproxy-latest.tar
           path: imageproxy-latest.tar
