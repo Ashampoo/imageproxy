@@ -42,6 +42,8 @@ private val validQualityRange = 10..100
 private const val DEFAULT_LONG_SIDE_PX = 480
 private const val DEFAULT_QUALITY = 90
 
+private const val MAX_LONG_SIDE_PX = 2048
+
 private const val DEFAULT_TARGET_FORMAT = ".jpg"
 
 private val httpClient = HttpClient()
@@ -72,11 +74,11 @@ fun Application.configureRouting() {
 
             val authToken = call.request.header(AUTHORIZATION_HEADER)
 
-            if (longSidePx > 2000) {
+            if (longSidePx > MAX_LONG_SIDE_PX) {
 
                 call.respond(
                     status = HttpStatusCode.BadRequest,
-                    message = "LongSidePx size must be lower than 2000px: $longSidePx"
+                    message = "LongSidePx size must be lower than $MAX_LONG_SIDE_PX pixels: $longSidePx"
                 )
 
                 return@get
